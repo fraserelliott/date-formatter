@@ -1,0 +1,24 @@
+{
+  "name": "date-formatter",
+  "version": "1.0.0",
+  "description": "Configurable date formatting from a constrained format string spec",
+  "keywords": [
+    "date",
+    "format",
+    "intl"
+  ],
+  "license": "MIT",
+  "author": "Fraser Elliott",
+  "type": "module",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "node --test",
+    "prepublishOnly": "npm test"
+  },
+  "files": [
+    "src"
+  ],
+  "exports": {
+    ".": "./src/index.js"
+  }
+}
