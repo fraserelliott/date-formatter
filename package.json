@@ -1,6 +1,6 @@
 {
-  "name": "date-formatter",
-  "version": "1.0.0",
+  "name": "@fraserelliott/date-formatter",
+  "version": "1.0.1",
   "description": "Configurable date formatting from a constrained format string spec",
   "keywords": [
     "date",
