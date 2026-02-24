@@ -110,5 +110,6 @@ export function parseDateFormatString(format) {
     monthDisplay,
     yearDisplay,
     separator,
+    formatString: format,
   };
 }
