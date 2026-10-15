@@ -1,11 +1,9 @@
 /** @typedef {import("./types.js").ParsedDateFormat} ParsedDateFormat */
 
 function splitWeekdayPrefix(format) {
-  const normalised = format.toUpperCase();
-
   // Weekday intended → must be valid
-  if (normalised.startsWith("W")) {
-    const match = normalised.match(/^(W+)(\W+)(.+)$/);
+  if (format.startsWith("W")) {
+    const match = format.match(/^(W+)(\W+)(.+)$/);
     if (!match) {
       throw new Error(
         'Invalid weekday prefix. Use "WWW" or "WWWW" followed by a separator.',
@@ -28,25 +26,24 @@ function splitWeekdayPrefix(format) {
   // No weekday intended
   return {
     weekdayDisplay: { type: "none" },
-    dateFormat: normalised,
+    dateFormat: format,
   };
 }
 
-function assertConsistentSeparators(dateFormat) {
-  const normalised = dateFormat.toUpperCase();
+function assertConsistentSeparators(format, allowNone = false) {
+  const normalised = format.toUpperCase().trim();
 
-  // Capture separators only when they occur between letter tokens.
-  const seps = [...normalised.matchAll(/[A-Z]+(\W+)[A-Z]+/g)].map((m) => m[1]);
+  const seps = normalised.match(/\W+/g) ?? [];
 
   if (seps.length === 0) {
-    throw new Error("Invalid date format: missing separator.");
+    if (allowNone) return null;
+    throw new Error("Invalid format: missing separator.");
   }
 
   const first = seps[0];
+
   if (!seps.every((s) => s === first)) {
-    throw new Error(
-      `Invalid date format: inconsistent separators (${seps.map(JSON.stringify).join(", ")}).`,
-    );
+    throw new Error("Invalid format: inconsistent separators.");
   }
 
   return first;
@@ -54,6 +51,34 @@ function assertConsistentSeparators(dateFormat) {
 
 function countStartsWith(sections, letter) {
   return sections.filter((s) => s.startsWith(letter)).length;
+}
+
+export function parseFormatString(format) {
+  const hasDate = /[WDMY]/.test(format);
+  const hasTime = /[Hhmsa]/.test(format);
+
+  if (hasDate && hasTime) {
+    const sections = format.split(/\s+(?=[Hhmsa])/);
+
+    if (sections.length !== 2) {
+      throw new Error("Invalid combined date/time format.");
+    }
+
+    return {
+      date: parseDateFormatString(sections[0]),
+      time: parseTimeFormatString(sections[1]),
+    };
+  }
+
+  if (hasDate) {
+    return { date: parseDateFormatString(format) };
+  }
+
+  if (hasTime) {
+    return { time: parseTimeFormatString(format) };
+  }
+
+  throw new Error("Invalid format string.");
 }
 
 /**
@@ -68,6 +93,10 @@ export function parseDateFormatString(format) {
   // split into sections (DD, MMM, YYYY, etc.)
   const sections = dateFormat.split(separator);
 
+  if (sections.some((s) => !/^(W{3,4}|D{1,2}|M{1,4}|Y{2,4})$/.test(s))) {
+    throw new Error("Invalid date format: unexpected token.");
+  }
+
   // reject duplicate tokens
   if (countStartsWith(sections, "D") !== 1)
     throw new Error("Expected exactly one day token (D or DD).");
@@ -77,7 +106,7 @@ export function parseDateFormatString(format) {
     throw new Error("Expected exactly one year token (YY or YYYY).");
 
   // infer order, e.g. DMY, MDY, YMD
-  const order = sections.map((s) => s.charAt(0).toUpperCase()).join("");
+  const order = sections.map((s) => s.charAt(0)).join("");
 
   // valid day tokens: D, DD
   const dayDisplay = {};
@@ -112,4 +141,40 @@ export function parseDateFormatString(format) {
     separator,
     formatString: format,
   };
+}
+
+export function parseTimeFormatString(format) {
+  const separator = assertConsistentSeparators(format, true);
+  const sections = separator ? format.split(separator) : [format];
+
+  if (sections.some((s) => !/^(h{1,2}|m{1,2}|s{1,2})$/.test(s)))
+    throw new Error("Invalid time format: unexpected token.");
+
+  if (countStartsWith(sections, "h") > 1)
+    throw new Error("Expected at most one hour token (h or hh).");
+  if (countStartsWith(sections, "m") > 1)
+    throw new Error("Expected at most one minute token (m or mm).");
+  if (countStartsWith(sections, "s") > 1)
+    throw new Error("Expected at most one second token (s or ss).");
+
+  const hourDisplay = formatSection(sections, "hour", "h");
+  const minuteDisplay = formatSection(sections, "minute", "m");
+  const secondDisplay = formatSection(sections, "second", "s");
+  const order = sections.map((s) => s.charAt(0)).join("");
+
+  return {
+    order,
+    hourDisplay,
+    minuteDisplay,
+    secondDisplay,
+    separator,
+    formatString: format,
+  };
+}
+
+function formatSection(sections, sectionName, letter) {
+  const token = sections.find((s) => s.startsWith(letter));
+  if (token === undefined) return {};
+  if (token.length === 1 || token.length === 2) return { length: token.length };
+  throw new Error(`Invalid length of ${sectionName} token`);
 }

@@ -1,7 +1,7 @@
 {
   "name": "@fraserelliott/date-formatter",
-  "version": "1.0.2",
-  "description": "Configurable date formatting from a constrained format string spec",
+  "version": "1.1.0",
+  "description": "Configurable date and time formatting from a constrained format string spec",
   "keywords": [
     "date",
     "format",
@@ -12,7 +12,7 @@
   "type": "module",
   "main": "./src/index.js",
   "scripts": {
-    "test": "node --test",
+    "test": "node test/testFormat.js",
     "prepublishOnly": "npm test"
   },
   "files": [

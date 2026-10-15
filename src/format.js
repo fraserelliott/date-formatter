@@ -1,4 +1,8 @@
-/** @typedef {import("./types.js").ParsedDateFormat} ParsedDateFormat */
+import {
+  parseTimeFormatString,
+  parseDateFormatString,
+  parseFormatString,
+} from "./parse.js";
 
 const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -24,9 +28,21 @@ function toDate(dateLike) {
  */
 export function formatDate(date, format) {
   if (typeof format === "string") {
-    const parsed = parseDateFormatString(format);
+    const parsed = parseFormatString(format);
     return formatDate(date, parsed);
   }
+
+  if (format.date) return formatDate(date, format.date);
+
+  if (
+    !format.order ||
+    !format.dayDisplay ||
+    !format.monthDisplay ||
+    !format.yearDisplay
+  )
+    throw new Error(
+      "Invalid date format: missing required formatting options.",
+    );
 
   const d = toDate(date);
 
@@ -59,4 +75,38 @@ export function formatDate(date, format) {
 
   const weekday = d.toLocaleString("en-GB", { weekday: weekdayDisplay.type });
   return weekday + weekdayDisplay.separator + dateStr;
+}
+
+export function formatTime(date, format) {
+  if (typeof format === "string") {
+    const parsed = parseFormatString(format);
+    return formatTime(date, parsed);
+  }
+
+  if (format.time) return formatTime(date, format.time);
+
+  if (!format.order)
+    throw new Error(
+      "Invalid time format: missing required formatting options.",
+    );
+
+  const d = toDate(date);
+
+  const { order, separator, hourDisplay, minuteDisplay, secondDisplay } =
+    format;
+
+  const parts = {
+    h: String(d.getHours()).padStart(hourDisplay?.length ?? 1, "0"),
+    m: String(d.getMinutes()).padStart(minuteDisplay?.length ?? 1, "0"),
+    s: String(d.getSeconds()).padStart(secondDisplay?.length ?? 1, "0"),
+  };
+
+  return order
+    .split("")
+    .map((k) => parts[k])
+    .join(separator ?? "");
+}
+
+export function formatDateTime(date, format) {
+  return `${formatDate(date, format)} ${formatTime(date, format)}`;
 }
